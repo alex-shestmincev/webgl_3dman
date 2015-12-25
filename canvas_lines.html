@@ -1,0 +1,288 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js canvas - lines - random</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			a {
+				color:#0078ff;
+			}
+		</style>
+	</head>
+	<body>
+
+		<script src="three.min.js"></script>
+
+		<script src="Projector.js"></script>
+		<script src="CanvasRenderer.js"></script>
+        <script src="TrackballControls.js"></script>
+        <script src="data.js"></script>
+
+		<script>
+
+			var mouseX = 0, mouseY = 0,
+
+			windowHalfX = window.innerWidth / 2,
+			windowHalfY = window.innerHeight / 2,
+
+			SEPARATION = 200,
+			AMOUNTX = 10,
+			AMOUNTY = 10,
+
+			camera, scene, renderer, controls;
+
+
+
+
+            var PI2 = Math.PI * 2;
+            var material = new THREE.SpriteCanvasMaterial( {
+
+                color: 0xffffff,
+                program: function ( context ) {
+                    context.beginPath();
+                    context.arc( 0, 0, 0, 0, PI2, true );
+                    context.fill();
+                }
+            } );
+
+            var clubAnalytics = window.clubAnalytics;
+            var pointBallClub = {}, pointBallGrip = {}, LFoot = {}, RFoot = {}, LKnee = {}, RKnee = {}, Hip = {},
+                    Head = {}, LSholder = {}, RSholder = {};
+
+            var ratio = 10;
+
+            pointBallClub.x = clubAnalytics.club_head_x[0] * ratio;
+            pointBallClub.y = clubAnalytics.club_head_y[0] * ratio;
+            pointBallClub.z = -clubAnalytics.club_head_z[0] * ratio;
+
+            pointBallGrip.x = clubAnalytics.club_hub_x[0] * ratio;
+            pointBallGrip.y = clubAnalytics.club_hub_y[0] * ratio;
+            pointBallGrip.z = -clubAnalytics.club_hub_z[0] * ratio;
+
+
+            var offsetHipZ = .35 * ratio;
+            var offsetKneeZ = .25 * ratio;
+            var offsetSholderX = .2 * ratio;
+
+            init();
+            animate();
+
+			function init() {
+
+				var container, separation = 100, amountX = 50, amountY = 50,
+				particles, particle;
+
+                LFoot.x = pointBallClub.x - offsetSholderX ;
+                LFoot.y = pointBallClub.y;
+                LFoot.z = pointBallGrip.z - offsetHipZ;
+
+                RFoot.x = pointBallClub.x + offsetSholderX;
+                RFoot.y = pointBallClub.y;
+                RFoot.z = pointBallGrip.z - offsetHipZ;
+
+                LKnee.x = pointBallClub.x - (pointBallGrip.x - LFoot.x) / 2;
+                LKnee.y = pointBallClub.y - (pointBallClub.y - pointBallGrip.y) * 5 / 8;
+                LKnee.z = pointBallGrip.z - offsetKneeZ;
+
+                RKnee.x = pointBallClub.x + (RFoot.x - pointBallGrip.x) / 2;
+                RKnee.y = pointBallClub.y - (pointBallClub.y - pointBallGrip.y) * 5 / 8;
+                RKnee.z = pointBallGrip.z - offsetKneeZ;
+
+                Hip.x = pointBallClub.x;
+                Hip.y = pointBallGrip.y + Math.abs(pointBallGrip.y)*.1;
+                Hip.z = pointBallGrip.z - offsetHipZ;
+
+                Head.x = pointBallClub.x;
+                Head.y = Hip.y - (LFoot.y-Hip.y) * .8;
+                Head.z = pointBallGrip.z;
+
+                var m = (Hip.y-Head.y)/(Hip.z-Head.z);
+                var b = Hip.y-m*Hip.z;
+
+                LSholder.x = pointBallClub.x - offsetSholderX;
+                LSholder.y = Hip.y - (LFoot.y-Hip.y) * .52;
+                LSholder.z = (LSholder.y-b)/m;
+
+                RSholder.x = pointBallClub.x + offsetSholderX;
+                RSholder.y = Hip.y - (LFoot.y-Hip.y) * .52;
+                RSholder.z = LSholder.z;
+
+
+				container = document.createElement('div');
+				document.body.appendChild(container);
+
+//				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+//				camera.position.z = 100;
+
+                camera = new THREE.PerspectiveCamera( 20, window.innerWidth / window.innerHeight, 1, 1000 );
+                camera.position.z = 500;
+                camera.rotation.z = 0;
+
+                controls = new THREE.TrackballControls( camera );
+
+                controls.rotateSpeed = 2.0;
+                controls.zoomSpeed = 1.2;
+                controls.panSpeed = 0.8;
+
+                controls.noZoom = false;
+                controls.noPan = false;
+
+                controls.staticMoving = false;
+                controls.dynamicDampingFactor = 0.1;
+
+                controls.keys = [ 65, 83, 68 ];
+
+
+
+                controls.addEventListener( 'change', render );
+
+//                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+//                camera.position.y = 150;
+//                camera.position.z = 500;
+
+				scene = new THREE.Scene();
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+                var legs = [LFoot, LKnee, Hip, RKnee, RFoot];
+                scene.add( newGeometry(legs) );
+
+                var body = [Hip, Head];
+                scene.add( newGeometry(body) );
+
+                var hands = [LSholder, RSholder, pointBallGrip, LSholder];
+                scene.add( newGeometry(hands) );
+
+                var club = [pointBallGrip, pointBallClub];
+                scene.add( newGeometry(club) );
+
+                for (var i=1; i< clubAnalytics.num_path_points; i++){
+                    var pointClub = {},pointGrip = {};
+                    pointClub.x = clubAnalytics.club_head_x[i] * ratio;
+                    pointClub.y = clubAnalytics.club_head_y[i] * ratio;
+                    pointClub.z = -clubAnalytics.club_head_z[i] * ratio;
+
+                    pointGrip.x = clubAnalytics.club_hub_x[i] * ratio;
+                    pointGrip.y = clubAnalytics.club_hub_y[i] * ratio;
+                    pointGrip.z = -clubAnalytics.club_hub_z[i] * ratio;
+
+                    var club = [pointClub, pointGrip];
+                    scene.add( newGeometry(club) );
+                }
+
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                controls.handleResize();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			//
+
+			function onDocumentMouseMove(event) {
+
+				mouseX = event.clientX - windowHalfX;
+				mouseY = event.clientY - windowHalfY;
+
+			}
+
+			function onDocumentTouchStart( event ) {
+
+				if ( event.touches.length > 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+			function onDocumentTouchMove( event ) {
+
+				if ( event.touches.length == 1 ) {
+
+					event.preventDefault();
+
+					mouseX = event.touches[ 0 ].pageX - windowHalfX;
+					mouseY = event.touches[ 0 ].pageY - windowHalfY;
+
+				}
+
+			}
+
+            function newGeometry(points){
+                var geometry = new THREE.Geometry();
+
+                points.forEach(function(point){
+
+                    var particle = new THREE.Sprite( material );
+                    particle.position.x = point.x;
+                    particle.position.y = point.y;
+                    particle.position.z = point.z;
+                    particle.scale.x = particle.scale.y = particle.scale.z = 10;
+                    scene.add( particle );
+
+                    geometry.vertices.push( particle.position );
+
+                });
+
+                // lines
+
+                return new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5 } ) );
+            }
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+                controls.update();
+
+				render();
+
+			}
+
+			function render() {
+
+				//camera.position.x += mouseX; // ( mouseX - camera.position.x ) * .05;
+				//camera.rotation.y += mouseX * 0.01 * Math.PI/36;// ( - mouseY + 200 - camera.position.y ) * .05;
+				//camera.lookAt( scene.position );
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+	</body>
+</html>
