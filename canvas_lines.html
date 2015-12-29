@@ -30,7 +30,7 @@
             var windowHalfX = window.innerWidth / 2,
 			windowHalfY = window.innerHeight / 2,
 
-            LINES = [],
+            ObjectsToRotate = [],
 
 			camera, scene, renderer, controls;
 
@@ -40,43 +40,84 @@
             var mouseX = 0;
             var mouseXOnMouseDown = 0;
 
-
-            var PI2 = Math.PI * 2;
-            var material = new THREE.SpriteCanvasMaterial( {
-
-                color: 0xffffff,
-                program: function ( context ) {
-                    context.beginPath();
-                    context.arc( 0, 0, 0, 0, PI2, true );
-                    context.fill();
-                }
-            } );
-
-            var clubAnalytics = window.clubAnalytics;
-            var pointBallClub = {}, pointBallGrip = {}, LFoot = {}, RFoot = {}, LKnee = {}, RKnee = {}, Hip = {},
-                    Head = {}, LSholder = {}, RSholder = {};
-
-            var ratio = 10;
-
-            pointBallClub.x = clubAnalytics.club_head_x[0] * ratio;
-            pointBallClub.y = clubAnalytics.club_head_y[0] * ratio;
-            pointBallClub.z = -clubAnalytics.club_head_z[0] * ratio;
-
-            pointBallGrip.x = clubAnalytics.club_hub_x[0] * ratio;
-            pointBallGrip.y = clubAnalytics.club_hub_y[0] * ratio;
-            pointBallGrip.z = -clubAnalytics.club_hub_z[0] * ratio;
-
-
-            var offsetHipZ = .35 * ratio;
-            var offsetKneeZ = .25 * ratio;
-            var offsetSholderX = .2 * ratio;
-
             init();
             animate();
 
 			function init() {
 
 				var container;
+
+                container = document.createElement('div');
+				document.body.appendChild(container);
+
+                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+                camera.position.y = 20;
+                camera.position.z = 100;
+
+				scene = new THREE.Scene();
+
+				renderer = new THREE.CanvasRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+                var coordinates = calculateCoordinatesByAnalytics(window.clubAnalytics);
+
+                // Man
+                addToScene( newLine(coordinates.LFoot, coordinates.LKnee, 0xCC66CC) );
+                addToScene( newLine(coordinates.LKnee, coordinates.Hip, 0xCC66CC) );
+                addToScene( newLine(coordinates.Hip, coordinates.RKnee , 0xCC66CC) );
+                addToScene( newLine(coordinates.RKnee, coordinates.RFoot, 0xCC66CC) );
+                addToScene( newLine(coordinates.Hip, coordinates.Head, 0xCC66CC) );
+                addToScene( newLine(coordinates.LSholder, coordinates.RSholder, 0xCC66CC) );
+                addToScene( newLine(coordinates.LSholder, coordinates.ClubsMovement[0][1], 0xCC66CC) );
+                addToScene( newLine(coordinates.RSholder, coordinates.ClubsMovement[0][1], 0xCC66CC) );
+
+                addToScene( newSphere(coordinates.LFoot, 1) );
+                addToScene( newSphere(coordinates.RFoot, 1) );
+                addToScene( newSphere(coordinates.LKnee, 1) );
+                addToScene( newSphere(coordinates.RKnee, 1) );
+                addToScene( newSphere(coordinates.Hip, 1) );
+                addToScene( newSphere(coordinates.Head, 1) );
+                addToScene( newSphere(coordinates.LSholder, 1) );
+                addToScene( newSphere(coordinates.RSholder, 1) );
+
+
+//                addToScene( newGeometry(coordinates.Legs) );
+//                addToScene( newGeometry(coordinates.Body) );
+//                addToScene( newGeometry(coordinates.Hands) );
+//                addToScene( newGeometry(coordinates.ClubInitial) );
+//                addToScene( newGeometry(coordinates.ClubInitial) );
+                coordinates.ClubsMovement.forEach(function(club){
+                    addToScene( newLine(club[0], club[1]) );
+                })
+
+                document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+                document.addEventListener( 'touchstart', onDocumentTouchStart, false );
+                document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+
+                window.addEventListener( 'resize', onWindowResize, false );
+            }
+
+            function calculateCoordinatesByAnalytics(clubAnalytics){
+                var pointBallClub = {}, pointBallGrip = {};
+
+                var LFoot = {}, RFoot = {}, LKnee = {}, RKnee = {}, Hip = {},
+                    Head = {}, LSholder = {}, RSholder = {}, clubsMovement = [];
+
+                var ratio = 10;
+
+                var offsetHipZ = .35 * ratio;
+                var offsetKneeZ = .25 * ratio;
+                var offsetSholderX = .2 * ratio;
+
+                pointBallClub.x = clubAnalytics.club_head_x[0] * ratio;
+                pointBallClub.y = clubAnalytics.club_head_y[0] * ratio;
+                pointBallClub.z = -clubAnalytics.club_head_z[0] * ratio;
+
+                pointBallGrip.x = clubAnalytics.club_hub_x[0] * ratio;
+                pointBallGrip.y = clubAnalytics.club_hub_y[0] * ratio;
+                pointBallGrip.z = -clubAnalytics.club_hub_z[0] * ratio;
 
                 LFoot.x = pointBallClub.x - offsetSholderX ;
                 LFoot.y = pointBallClub.y;
@@ -113,33 +154,6 @@
                 RSholder.y = Hip.y - (LFoot.y-Hip.y) * .52;
                 RSholder.z = LSholder.z;
 
-
-				container = document.createElement('div');
-				document.body.appendChild(container);
-
-                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
-                camera.position.y = 20;
-                camera.position.z = 100;
-
-				scene = new THREE.Scene();
-
-				renderer = new THREE.CanvasRenderer();
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
-
-                var legs = [LFoot, LKnee, Hip, RKnee, RFoot];
-                scene.add( newGeometry(legs) );
-
-                var body = [Hip, Head];
-                scene.add( newGeometry(body) );
-
-                var hands = [LSholder, RSholder, pointBallGrip, LSholder];
-                scene.add( newGeometry(hands) );
-
-                var club = [pointBallGrip, pointBallClub];
-                scene.add( newGeometry(club) );
-
                 for (var i=1; i< clubAnalytics.num_path_points; i++){
                     var pointClub = {},pointGrip = {};
                     pointClub.x = clubAnalytics.club_head_x[i] * ratio;
@@ -150,39 +164,75 @@
                     pointGrip.y = clubAnalytics.club_hub_y[i] * ratio;
                     pointGrip.z = -clubAnalytics.club_hub_z[i] * ratio;
 
-                    var club = [pointClub, pointGrip];
-                    scene.add( newGeometry(club) );
+                    clubsMovement.push([pointClub, pointGrip]);
                 }
 
+                return {
+                    LFoot: LFoot,
+                    RFoot: RFoot,
+                    LKnee: LKnee,
+                    RKnee: RKnee,
+                    Hip: Hip,
+                    Head: Head,
+                    LSholder: LSholder,
+                    RSholder: RSholder,
+                    ClubsMovement: clubsMovement,
 
-                document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-                document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-                document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+                    Legs: [LFoot, LKnee, Hip, RKnee, RFoot],
+                    Body: [Hip, Head],
+                    Hands: [LSholder, RSholder, pointBallGrip, LSholder],
+                    ClubInitial: [pointBallGrip, pointBallClub]
 
-                window.addEventListener( 'resize', onWindowResize, false );
+                }
             }
 
+            function addToScene(object){
+                ObjectsToRotate.push(object);
+                scene.add( object );
+            }
 
-            function newGeometry(points){
+            function newLine(startPoint, endPoint, color){
+                color = color || 0xFFFFFF;
+                if (!startPoint || !endPoint || typeof startPoint !== 'object' || typeof endPoint !== 'object'){
+                    throw new Error ('Bad data for newLine [startPoint, endPoint, color]', startPoint, endPoint);
+                }
                 var geometry = new THREE.Geometry();
+                geometry.vertices.push(new THREE.Vector3( startPoint.x, startPoint.y, startPoint.z) );
+                geometry.vertices.push(new THREE.Vector3( endPoint.x, endPoint.y, endPoint.z ) );
 
-                points.forEach(function(point){
-
-                    var particle = new THREE.Sprite( material );
-                    particle.position.x = point.x;
-                    particle.position.y = point.y;
-                    particle.position.z = point.z;
-                    particle.scale.x = particle.scale.y = particle.scale.z = 10;
-                    scene.add( particle );
-
-                    geometry.vertices.push( particle.position );
-
+                var material = new THREE.LineBasicMaterial({
+                    color: color
                 });
 
-                // lines
-                var line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5 } ) );
-                LINES.push(line);
-                return line;
+                return new THREE.Line( geometry, material );
+            }
+
+            function newSphere(center,radius,color){
+                color = color || 0xFFFFFF;
+                if (!center || !radius){
+                    throw new Error ('Bad data for newSphere [center,radius]', center, radius);
+                }
+
+////                var geometry = new THREE.Sphere( new THREE.Vector3(center.x, center.y, center.z),  radius);
+//                var material = new THREE.MeshBasicMaterial( { color: color } );
+//                var segments = 16, rings = 16;
+//                // create a new mesh with sphere geometry -
+//                var sphere = new THREE.Mesh( new THREE.SphereGeometry(radius, segments, rings), material);
+//                sphere.position.set( center.x, center.y, center.z );
+//                var quaternion = new THREE.Quaternion().setFromAxisAngle( new THREE.Vector3(1,0,0), 0 );
+//                sphere.rotation = new THREE.Euler(0, 0, 0);
+//                sphere.scale.set( 1, 1, 1 );
+//                sphere.overdraw = true;
+//                return sphere;
+
+                var dotGeometry = new THREE.Geometry();
+                dotGeometry.vertices.push(new THREE.Vector3( center.x, center.y, center.z));
+                var dotMaterial = new THREE.PointsMaterial( { size: 100, sizeAttenuation: true, color: 0xffffff } );
+                var point = new THREE.Points( dotGeometry, dotMaterial );
+                console.log('point',point)
+                return point;
+
+                //return new THREE.Sphere(new THREE.Vector3(center.x, center.y, center.z), radius);
             }
 
             function onWindowResize() {
@@ -245,8 +295,8 @@
             }
 
             function render() {
-                LINES.forEach(function(line){
-                    line.rotation.y += ( targetRotation - line.rotation.y ) * 0.05;
+                ObjectsToRotate.forEach(function(object){
+                    object.rotation.y += ( targetRotation - object.rotation.y ) * 0.05;
                 });
                 renderer.render( scene, camera );
             }
