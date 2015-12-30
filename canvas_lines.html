@@ -42,6 +42,12 @@
             var dYOffset = -20;
             var cameraZoom = 6;
 
+            var clubColorCurrentPosition = 0xFFFFFF;
+            var clubColorSwing = 0xFF0000;
+            var clubColorHit = 0x0033FF;
+            var clubGripColorHit = 0x00FFFF;
+            var clubGripColorSwing = 0xFF33FF;
+
             init();
             animate();
 
@@ -73,8 +79,7 @@
                 scene.add( newLine(coordinates.RKnee, coordinates.RFoot, 0xCC66CC, 2) );
                 scene.add( newLine(coordinates.Hip, coordinates.Head, 0xCC66CC, 2) );
                 scene.add( newLine(coordinates.LSholder, coordinates.RSholder, 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.LSholder, coordinates.ClubsMovement[0][1], 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.RSholder, coordinates.ClubsMovement[0][1], 0xCC66CC, 2) );
+
 
                 scene.add( newSphere(coordinates.LFoot, 1, 0xCC66CC) );
                 scene.add( newSphere(coordinates.RFoot, 1, 0xCC66CC) );
@@ -85,10 +90,7 @@
                 scene.add( newSphere(coordinates.LSholder, 1, 0xCC66CC) );
                 scene.add( newSphere(coordinates.RSholder, 1, 0xCC66CC) );
 
-                var clubColorSwing = 0xFF0000;
-                var clubColorHit = 0x0033FF;
-                var clubGripColorHit = 0x00FFFF;
-                var clubGripColorSwing = 0xFF33FF;
+
                 var middle = false;
                 coordinates.ClubsMovement.forEach(function(club, i){
                     if (i>0 && i < coordinates.ClubsMovement.length-1 && coordinates.ClubsMovement[i][0].x > coordinates.ClubsMovement[i-1][0].x
@@ -97,16 +99,39 @@
                     }
                     var colorClub = colorClubHead = middle ? clubColorHit : clubColorSwing;
                     var colorClubGrip = middle ? clubGripColorHit : clubGripColorSwing;
-                    scene.add( newLine(club[0], club[1], colorClub) );
+                    scene.add( newLine(club[0], club[1], colorClub, 0.5) );
                     scene.add( newSphere(club[0], 0.5, colorClubHead) );
                     scene.add( newSphere(club[1], 0.5, colorClubGrip) );
-                })
+                });
 
                 document.addEventListener( 'mousedown', onDocumentMouseDown, false );
                 document.addEventListener( 'touchstart', onDocumentTouchStart, false );
                 document.addEventListener( 'touchmove', onDocumentTouchMove, false );
 
                 window.addEventListener( 'resize', onWindowResize, false );
+            }
+
+            function setCurrentClubPosition(coordinates,i){
+                removeFromScene('leftArm');
+                removeFromScene('rightArm');
+                removeFromScene('currentClub');
+                removeFromScene('currentClubHead');
+                removeFromScene('currentClubGrip');
+
+                // left arm
+                scene.add( newLine(coordinates.LSholder, coordinates.ClubsMovement[i][1], 0xCC66CC, 2, 'leftArm') );
+                // right arm
+                scene.add( newLine(coordinates.RSholder, coordinates.ClubsMovement[i][1], 0xCC66CC, 2, 'rightArm') );
+                //club
+                scene.add( newLine(coordinates.ClubsMovement[i][0], coordinates.ClubsMovement[i][1], clubColorCurrentPosition, 2, 'currentClub') );
+                scene.add( newSphere(coordinates.ClubsMovement[i][0], 1, clubColorCurrentPosition, 'currentClubHead')  );
+                scene.add( newSphere(coordinates.ClubsMovement[i][1], 1, clubColorCurrentPosition, 'currentClubGrip') )
+            }
+
+            function removeFromScene(name) {
+                var selectedObject = scene.getObjectByName(name);
+                scene.remove( selectedObject );
+                //animate();
             }
 
             function calculateCoordinatesByAnalytics(clubAnalytics){
@@ -196,7 +221,7 @@
                 }
             }
 
-            function newLine(startPoint, endPoint, color, linewidth){
+            function newLine(startPoint, endPoint, color, linewidth, name){
                 color = color || 0xFFFFFF;
                 linewidth = linewidth || 1;
                 if (!startPoint || !endPoint || typeof startPoint !== 'object' || typeof endPoint !== 'object'){
@@ -211,10 +236,15 @@
                     linewidth:linewidth,
                 });
 
-                return new THREE.Line( geometry, material );
+                var line = new THREE.Line( geometry, material );
+                if (name) {
+                    line.name = name;
+                }
+
+                return line;
             }
 
-            function newSphere(center,radius,color){
+            function newSphere(center,radius,color,name){
                 color = color || 0xFFFFFF;
                 if (!center || !radius){
                     throw new Error ('Bad data for newSphere [center,radius]', center, radius);
@@ -227,6 +257,9 @@
                 sphere.position.y = center.y;
                 sphere.position.z = center.z;
 
+                if (name) {
+                    sphere.name = name;
+                }
 
                 return sphere;
             }
