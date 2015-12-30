@@ -18,12 +18,12 @@
 		</style>
 	</head>
 	<body>
+        <button type="Button" onclick="startMove()" >Move</button>
 
 		<script src="three.min.js"></script>
 
 		<script src="Projector.js"></script>
 		<script src="CanvasRenderer.js"></script>
-		<script src="OrbitControls.js"></script>
         <script src="data.js"></script>
 
 		<script>
@@ -31,13 +31,14 @@
             var windowHalfX = window.innerWidth / 2,
 			windowHalfY = window.innerHeight / 2,
 
-			camera, scene, renderer, controls;
+			camera, scene, renderer, coordinates;
 
             var targetRotation = 0;
             var targetRotationOnMouseDown = 0;
 
             var mouseX = 0;
             var mouseXOnMouseDown = 0;
+
 
             var dYOffset = -20;
             var cameraZoom = 6;
@@ -70,7 +71,7 @@
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
 
-                var coordinates = calculateCoordinatesByAnalytics(window.clubAnalytics);
+                coordinates = calculateCoordinatesByAnalytics(window.clubAnalytics);
 
                 // Man
                 scene.add( newLine(coordinates.LFoot, coordinates.LKnee, 0xCC66CC , 2) );
@@ -93,16 +94,18 @@
 
                 var middle = false;
                 coordinates.ClubsMovement.forEach(function(club, i){
-                    if (i>0 && i < coordinates.ClubsMovement.length-1 && coordinates.ClubsMovement[i][0].x > coordinates.ClubsMovement[i-1][0].x
+                    if (i>window.clubAnalytics.num_path_points/4 && i < coordinates.ClubsMovement.length-1 && coordinates.ClubsMovement[i][0].x > coordinates.ClubsMovement[i-1][0].x
                             && coordinates.ClubsMovement[i][0].x > coordinates.ClubsMovement[i+1][0].x){
                         middle = true;
                     }
                     var colorClub = colorClubHead = middle ? clubColorHit : clubColorSwing;
                     var colorClubGrip = middle ? clubGripColorHit : clubGripColorSwing;
-                    scene.add( newLine(club[0], club[1], colorClub, 0.5) );
-                    scene.add( newSphere(club[0], 0.5, colorClubHead) );
-                    scene.add( newSphere(club[1], 0.5, colorClubGrip) );
+                    scene.add( newLine(club[0], club[1], colorClub, 0.2) );
+                    scene.add( newSphere(club[0], 0.2, colorClubHead) );
+                    scene.add( newSphere(club[1], 0.2, colorClubGrip) );
                 });
+
+                setCurrentClubPosition(coordinates,0);
 
                 document.addEventListener( 'mousedown', onDocumentMouseDown, false );
                 document.addEventListener( 'touchstart', onDocumentTouchStart, false );
@@ -111,7 +114,7 @@
                 window.addEventListener( 'resize', onWindowResize, false );
             }
 
-            function setCurrentClubPosition(coordinates,i){
+            function setCurrentClubPosition(coordinates,i){ console.log('setCurrentClubPosition', i, coordinates);
                 removeFromScene('leftArm');
                 removeFromScene('rightArm');
                 removeFromScene('currentClub');
@@ -132,6 +135,17 @@
                 var selectedObject = scene.getObjectByName(name);
                 scene.remove( selectedObject );
                 //animate();
+            }
+
+            function startMove(){
+                for (var i = 0; i < window.clubAnalytics.num_path_points; i++) {
+                    (function(i) {
+                        setTimeout(function () {
+                            setCurrentClubPosition(coordinates, i);
+                        }, i * 20);
+                    })(i);
+
+                }
             }
 
             function calculateCoordinatesByAnalytics(clubAnalytics){
@@ -189,7 +203,7 @@
                 RSholder.y = Hip.y - (LFoot.y-Hip.y) * .52;
                 RSholder.z = LSholder.z;
 
-                for (var i=1; i< clubAnalytics.num_path_points; i++){
+                for (var i=0; i< clubAnalytics.num_path_points; i++){
                     var pointClub = {},pointGrip = {};
                     pointClub.x = clubAnalytics.club_head_x[i] * ratio;
                     pointClub.y = clubAnalytics.club_head_y[i] * ratio + dYOffset;
