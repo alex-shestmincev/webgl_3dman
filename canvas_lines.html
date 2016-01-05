@@ -40,9 +40,14 @@
             var mouseXOnMouseDown = 0;
 
 
-            var dYOffset = -20;
-            var cameraZoom = 6;
+            var dYOffset = -2;
+            var cameraZoom = 50;
+            var radius = 0.03;
+            var bodyRadius = 0.1;
+            var thick = 0.3;
+            var bodyThick = 2;
 
+            var bodyColor = 0xCC66CC;
             var clubColorCurrentPosition = 0xFFFFFF;
             var clubColorSwing = 0xFF0000;
             var clubColorHit = 0x0033FF;
@@ -74,22 +79,22 @@
                 coordinates = calculateCoordinatesByAnalytics(window.clubAnalytics);
 
                 // Man
-                scene.add( newLine(coordinates.LFoot, coordinates.LKnee, 0xCC66CC , 2) );
-                scene.add( newLine(coordinates.LKnee, coordinates.Hip, 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.Hip, coordinates.RKnee , 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.RKnee, coordinates.RFoot, 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.Hip, coordinates.Head, 0xCC66CC, 2) );
-                scene.add( newLine(coordinates.LSholder, coordinates.RSholder, 0xCC66CC, 2) );
+                scene.add( newLine(coordinates.LFoot, coordinates.LKnee, bodyColor , bodyThick) );
+                scene.add( newLine(coordinates.LKnee, coordinates.Hip, bodyColor, bodyThick) );
+                scene.add( newLine(coordinates.Hip, coordinates.RKnee , bodyColor, bodyThick) );
+                scene.add( newLine(coordinates.RKnee, coordinates.RFoot, bodyColor, bodyThick) );
+                scene.add( newLine(coordinates.Hip, coordinates.Head, bodyColor, bodyThick) );
+                scene.add( newLine(coordinates.LSholder, coordinates.RSholder, bodyColor, bodyThick) );
 
 
-                scene.add( newSphere(coordinates.LFoot, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.RFoot, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.LKnee, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.RKnee, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.Hip, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.Head, 2, 0xCC66CC) );
-                scene.add( newSphere(coordinates.LSholder, 1, 0xCC66CC) );
-                scene.add( newSphere(coordinates.RSholder, 1, 0xCC66CC) );
+                scene.add( newSphere(coordinates.LFoot, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.RFoot, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.LKnee, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.RKnee, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.Hip, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.Head, 2 * bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.LSholder, bodyRadius, bodyColor) );
+                scene.add( newSphere(coordinates.RSholder, bodyRadius, bodyColor) );
 
 
                 var middle = false;
@@ -100,9 +105,9 @@
                     }
                     var colorClub = colorClubHead = middle ? clubColorHit : clubColorSwing;
                     var colorClubGrip = middle ? clubGripColorHit : clubGripColorSwing;
-                    scene.add( newLine(club[0], club[1], colorClub, 0.2) );
-                    scene.add( newSphere(club[0], 0.2, colorClubHead) );
-                    scene.add( newSphere(club[1], 0.2, colorClubGrip) );
+                    scene.add( newLine(club[0], club[1], colorClub, thick) );
+                    scene.add( newSphere(club[0], radius, colorClubHead) );
+                    scene.add( newSphere(club[1], radius, colorClubGrip) );
                 });
 
                 setCurrentClubPosition(coordinates,0);
@@ -122,13 +127,13 @@
                 removeFromScene('currentClubGrip');
 
                 // left arm
-                scene.add( newLine(coordinates.LSholder, coordinates.ClubsMovement[i][1], 0xCC66CC, 2, 'leftArm') );
+                scene.add( newLine(coordinates.LSholder, coordinates.ClubsMovement[i][1], bodyColor, bodyThick, 'leftArm') );
                 // right arm
-                scene.add( newLine(coordinates.RSholder, coordinates.ClubsMovement[i][1], 0xCC66CC, 2, 'rightArm') );
+                scene.add( newLine(coordinates.RSholder, coordinates.ClubsMovement[i][1], bodyColor, bodyThick, 'rightArm') );
                 //club
-                scene.add( newLine(coordinates.ClubsMovement[i][0], coordinates.ClubsMovement[i][1], clubColorCurrentPosition, 2, 'currentClub') );
-                scene.add( newSphere(coordinates.ClubsMovement[i][0], 1, clubColorCurrentPosition, 'currentClubHead')  );
-                scene.add( newSphere(coordinates.ClubsMovement[i][1], 1, clubColorCurrentPosition, 'currentClubGrip') )
+                scene.add( newLine(coordinates.ClubsMovement[i][0], coordinates.ClubsMovement[i][1], clubColorCurrentPosition, bodyThick, 'currentClub') );
+                scene.add( newSphere(coordinates.ClubsMovement[i][0], bodyRadius, clubColorCurrentPosition, 'currentClubHead')  );
+                scene.add( newSphere(coordinates.ClubsMovement[i][1], bodyRadius, clubColorCurrentPosition, 'currentClubGrip') )
             }
 
             function removeFromScene(name) {
@@ -148,25 +153,36 @@
                 }
             }
 
+            function calculateLineLength (x0,y0,z0,x1,y1,z1) {
+                return Math.sqrt( Math.pow((x1 - x0),2) + Math.pow((y1 - y0),2) + Math.pow((z1 - z0),2));                  //√(xb - xa)2 + (yb - ya)2 + (zb - za)2
+
+            }
+
             function calculateCoordinatesByAnalytics(clubAnalytics){
                 var pointBallClub = {}, pointBallGrip = {};
 
                 var LFoot = {}, RFoot = {}, LKnee = {}, RKnee = {}, Hip = {},
                     Head = {}, LSholder = {}, RSholder = {}, clubsMovement = [];
 
-                var ratio = 10;
 
-                var offsetHipZ = .35 * ratio;
-                var offsetKneeZ = .25 * ratio;
-                var offsetSholderX = .2 * ratio;
 
-                pointBallClub.x = clubAnalytics.club_head_x[0] * ratio;
-                pointBallClub.y = clubAnalytics.club_head_y[0] * ratio + dYOffset;
-                pointBallClub.z = -clubAnalytics.club_head_z[0] * ratio;
 
-                pointBallGrip.x = clubAnalytics.club_hub_x[0] * ratio;
-                pointBallGrip.y = clubAnalytics.club_hub_y[0] * ratio + dYOffset;
-                pointBallGrip.z = -clubAnalytics.club_hub_z[0] * ratio;
+                var clubLength = calculateLineLength(clubAnalytics.club_head_x[0], clubAnalytics.club_head_y[0], clubAnalytics.club_head_z[0]
+                        , clubAnalytics.club_hub_x[0], clubAnalytics.club_hub_y[0], clubAnalytics.club_hub_z[0]);
+                var clubLengthZ = calculateLineLength(0,0,clubAnalytics.club_head_z[0],0,0,clubAnalytics.club_hub_z[0]);
+                var clubLengthY = calculateLineLength(0,clubAnalytics.club_head_y[0],0,0,clubAnalytics.club_hub_y[0],0);
+
+                var offsetHipZ = 0.3 * clubLengthZ;
+                var offsetKneeZ = 0.2 * clubLengthZ;
+                var offsetSholderX = clubLength/8;
+
+                pointBallClub.x = clubAnalytics.club_head_x[0];
+                pointBallClub.y = clubAnalytics.club_head_y[0] + dYOffset;
+                pointBallClub.z = -clubAnalytics.club_head_z[0];
+
+                pointBallGrip.x = clubAnalytics.club_hub_x[0];
+                pointBallGrip.y = clubAnalytics.club_hub_y[0] + dYOffset;
+                pointBallGrip.z = -clubAnalytics.club_hub_z[0];
 
                 LFoot.x = pointBallClub.x - offsetSholderX ;
                 LFoot.y = pointBallClub.y;
@@ -177,19 +193,19 @@
                 RFoot.z = pointBallGrip.z - offsetHipZ;
 
                 LKnee.x = pointBallClub.x - (pointBallGrip.x - LFoot.x) / 2;
-                LKnee.y = pointBallClub.y - (pointBallClub.y - pointBallGrip.y) * 5 / 8;
+                LKnee.y = pointBallClub.y + clubLengthY * 5 / 8;
                 LKnee.z = pointBallGrip.z - offsetKneeZ;
 
                 RKnee.x = pointBallClub.x + (RFoot.x - pointBallGrip.x) / 2;
-                RKnee.y = pointBallClub.y - (pointBallClub.y - pointBallGrip.y) * 5 / 8;
+                RKnee.y = pointBallClub.y + clubLengthY * 5 / 8;
                 RKnee.z = pointBallGrip.z - offsetKneeZ;
 
                 Hip.x = pointBallClub.x;
-                Hip.y = pointBallGrip.y + Math.abs(pointBallGrip.y)*.1;
+                Hip.y = pointBallClub.y + clubLengthY * 1.1;
                 Hip.z = pointBallGrip.z - offsetHipZ;
 
                 Head.x = pointBallClub.x;
-                Head.y = Hip.y - (LFoot.y-Hip.y) * .8;
+                Head.y = Hip.y + clubLengthY * .8;
                 Head.z = pointBallGrip.z;
 
                 var m = (Hip.y-Head.y)/(Hip.z-Head.z);
@@ -205,13 +221,13 @@
 
                 for (var i=0; i< clubAnalytics.num_path_points; i++){
                     var pointClub = {},pointGrip = {};
-                    pointClub.x = clubAnalytics.club_head_x[i] * ratio;
-                    pointClub.y = clubAnalytics.club_head_y[i] * ratio + dYOffset;
-                    pointClub.z = -clubAnalytics.club_head_z[i] * ratio;
+                    pointClub.x = clubAnalytics.club_head_x[i];
+                    pointClub.y = clubAnalytics.club_head_y[i] + dYOffset;
+                    pointClub.z = -clubAnalytics.club_head_z[i];
 
-                    pointGrip.x = clubAnalytics.club_hub_x[i] * ratio;
-                    pointGrip.y = clubAnalytics.club_hub_y[i] * ratio + dYOffset;
-                    pointGrip.z = -clubAnalytics.club_hub_z[i] * ratio;
+                    pointGrip.x = clubAnalytics.club_hub_x[i];
+                    pointGrip.y = clubAnalytics.club_hub_y[i] + dYOffset;
+                    pointGrip.z = -clubAnalytics.club_hub_z[i];
 
                     clubsMovement.push([pointClub, pointGrip]);
                 }
@@ -341,6 +357,7 @@
                 camera.position.x = Math.cos(targetRotation + Math.PI/2) * 500;
                 camera.position.z = Math.sin(targetRotation + Math.PI/2) * 500;
                 camera.lookAt( scene.position );
+
 
                 renderer.render( scene, camera );
             }
